@@ -28,7 +28,7 @@ echo "latest asnible version : $v_apk"
 
 ```
 (
-docker build -t kawaz/ansible:latest . &&
+docker build -t kawaz/ansible:latest https://github.com/kawaz/docker-ansible/raw/master/Dockerfile &&
 v=$(docker run --rm kawaz/ansible ansible --version | grep -Eom1 '[0-9][0-9\.]+') && [[ -n $v ]] && \
 docker tag kawaz/ansible:latest kawaz/ansible:"$v" && \
 docker push kawaz/ansible:latest kawaz/ansible:"$v"
