@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+set -o pipefail
+v=$(docker run $IMAGE_NAME ansible --version | grep -Eom1 '[0-9][0-9\.]+')
+if [[ -n $v ]]; then
+  docker tag "$IMAGE_NAME" "$DOCKER_REPO:$v"
+  docker push "$DOCKER_REPO:$v"
+fi
