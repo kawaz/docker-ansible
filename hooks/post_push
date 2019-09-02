@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 set -o pipefail
+env
 v=$(docker run $IMAGE_NAME ansible --version | grep -Eom1 '[0-9][0-9\.]+')
 if [[ -n $v ]]; then
   docker tag "$IMAGE_NAME" "$DOCKER_REPO:$v"
