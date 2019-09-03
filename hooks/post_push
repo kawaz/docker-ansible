@@ -1,10 +1,10 @@
 #!/bin/bash
 declare -p SOURCE_BRANCH SOURCE_COMMIT COMMIT_MSG DOCKER_REPO DOCKERFILE_PATH DOCKER_TAG IMAGE_NAME
-set -e
+set -evx
 set -o pipefail
-v=$(docker run $IMAGE_NAME ansible --version | grep -Eom1 '[0-9][0-9\.]+')
-if [[ -n $v ]]; then
-  set -x
-  docker tag "$IMAGE_NAME" "$DOCKER_REPO:$v"
-  docker push "$DOCKER_REPO:$v"
+v_hub=$(curl -sL https://registry.hub.docker.com/v2/repositories/kawaz/ansible/tags/ | perl -pe's/.*?("name":\s*"([\w\.]+)").*?/$2\n/g' | grep -E '^[0-9\.]+$' | sort -rV | head -n1)
+v_cur=$(docker run $IMAGE_NAME ansible --version | grep -Eom1 '[0-9][0-9\.]+')
+if [[ -n $v_cur && $v_cur != $v_hub ]]; then
+  docker tag "$IMAGE_NAME" "$DOCKER_REPO:$v_cur"
+  docker push "$DOCKER_REPO:$v_cur"
 fi
