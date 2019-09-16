@@ -1,11 +1,8 @@
 name: CI
 
 on:
-  push:
-    branches:
-      - master
   schedule:
-    - cron: '0 45 * * 1-5'
+    - cron: '0 55 * * 1-5'
 
 jobs:
   build:
@@ -20,3 +17,20 @@ jobs:
       run: |
         echo Add other actions to build,
         echo test, and deploy your project.
+    - name: check update
+      run: |
+        # Check version
+        v_hub=$(docker run --rm alpine sh -c 'apk -q add jq curl && curl -sL https://registry.hub.docker.com/v2/repositories/kawaz/ansible/tags/|jq -r ".results[].name"|grep ^[0-9]|sort -Vr|head -n1')
+        v_apk=$(docker run --rm -ti alpine apk --no-cache search ansible | grep ^ansible-[0-9] | grep -oE '[0-9\.]+' | head -n1)
+        echo "latest tag             : $v_hub"
+        echo "latest asnible version : $v_apk"
+        # Build and push with version tag
+        if [[ -n $v_hub && -n $v_apk && $v_hub != $v_apk ]]; then
+          docker build -t kawaz/ansible:latest https://github.com/kawaz/docker-ansible/raw/master/Dockerfile &&
+          v=$(docker run --rm kawaz/ansible ansible --version | grep -Eom1 '[0-9][0-9\.]+') && [[ -n $v ]] && \
+          docker tag kawaz/ansible:latest kawaz/ansible:"$v" && \
+          for tag in latest "$v"; do docker push "kawaz/ansible:$tag"; done
+        fi
+    - name: debug vars
+      run: echo "$v_hub $v_apk"
+
