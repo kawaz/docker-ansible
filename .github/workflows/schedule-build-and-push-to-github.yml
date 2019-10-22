@@ -1,0 +1,39 @@
+name: docker push, when new ansible version is released. ( for Github Package Registry )
+
+on:
+  #push:
+  #  branches:
+  #  - master
+  schedule:
+    - cron: '10 */6 * * *'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: check update
+      run: |
+        set -e
+        set -o pipefail
+        # Login
+        docker login docker.pkg.github.com -u "$GITHUB_ACTOR" -p "${{ secrets.GITHUB_TOKEN }}"
+        # Check version
+        IMAGE_NAME=docker.pkg.github.com/kawaz/docker-ansible/ansible
+        v_repo=$(docker run --rm $IMAGE_NAME:latest ansible --version | grep -Eom1 '[0-9][0-9\.]+')
+        v_apk=$(docker run --rm alpine apk --no-cache search ansible | grep ^ansible-[0-9] | grep -oE '[0-9\.]+' | head -n1)
+        echo "latest image version        : $v_repo"
+        echo "current apk package version : $v_apk"
+        # Build and push with version tag
+        if [[ -n $v_repo && -n $v_apk && $v_repo != $v_apk ]]; then
+          # build
+          docker build -t ansible:latest .
+          v=$(docker run --rm ansible:latest ansible --version | grep -Eom1 '[0-9][0-9\.]+')
+          if [[ -n $v ]]; then
+            # push
+            for tag in "$v" latest; do
+              docker tag ansible:latest "$IMAGE_NAME:$tag"
+              docker push "$IMAGE_NAME:$tag"
+            done
+          fi
+        fi
