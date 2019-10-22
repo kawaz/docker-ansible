@@ -6,13 +6,16 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-    
     steps:
     - uses: actions/checkout@v1
     - name: check update
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       run: |
+        set -e
+        set -o pipefail
         # Check version
         v_hub=$(docker run --rm alpine sh -c 'apk -q add jq curl && curl -sL https://registry.hub.docker.com/v2/repositories/kawaz/ansible/tags/|jq -r ".results[].name"|grep ^[0-9]|sort -Vr|head -n1')
         v_apk=$(docker run --rm alpine apk --no-cache search ansible | grep ^ansible-[0-9] | grep -oE '[0-9\.]+' | head -n1)
@@ -20,11 +23,16 @@ jobs:
         echo "latest asnible version : $v_apk"
         # Build and push with version tag
         if [[ -n $v_hub && -n $v_apk && $v_hub != $v_apk ]]; then
-          docker build -t kawaz/ansible:latest https://github.com/kawaz/docker-ansible/raw/master/Dockerfile &&
-          v=$(docker run --rm kawaz/ansible ansible --version | grep -Eom1 '[0-9][0-9\.]+') && [[ -n $v ]] && \
-          docker tag kawaz/ansible:latest kawaz/ansible:"$v" && \
-          for tag in latest "$v"; do docker push "kawaz/ansible:$tag"; done
+          # build
+          docker build -t kawaz/ansible:latest https://github.com/kawaz/docker-ansible/raw/master/Dockerfile
+          v=$(docker run --rm kawaz/ansible ansible --version | grep -Eom1 '[0-9][0-9\.]+')
+          if [[ -n $v ]]; then
+            docker tag kawaz/ansible:latest kawaz/ansible:"$v"
+            # login
+            docker login -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}"
+            # push
+            for tag in latest "$v"; do
+              docker push "kawaz/ansible:$tag"
+            done
+          fi
         fi
-    - name: debug vars
-      run: echo "$v_hub $v_apk"
-
