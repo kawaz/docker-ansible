@@ -2,7 +2,7 @@ name: docker push, when new ansible version is released. ( for Docker Hub )
 
 on:
   schedule:
-    - cron: '20 */6 * * *'
+    - cron: '20 0 * * *'
 
 jobs:
   build:
